@@ -17,7 +17,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="antialiased">
-        <AppSession>
+        <AppSession  session={null}>
           <NextUIProvider>
             {children}
           </NextUIProvider>
