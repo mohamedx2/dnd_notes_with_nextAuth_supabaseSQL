@@ -1,16 +1,22 @@
 "use client";
-import { ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
+import type { Session } from 'next-auth';
 import { SessionProvider } from 'next-auth/react';
+
+interface AppSessionProps {
+  children: ReactNode;
+  session: Session | null;
+}
 
 export default function AppSession({
   children,
-}: {
-  children: ReactNode;
-}) {
+  session,
+}: AppSessionProps) {  
   return (
-    <SessionProvider>
+    <SessionProvider session={session}>
       {children}
     </SessionProvider>
   );
 }
+
