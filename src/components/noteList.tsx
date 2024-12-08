@@ -40,10 +40,8 @@ interface NoteListProps {
   onEdit: (note: NoteWithTypeName) => void;
   onDelete: (noteId: number) => void;
   onRemoveType?: (typeId: number) => void;
-  onAddType?: () => void;
   onMoveNote?: (noteId: number, newTypeId: number) => void;
   undo?: (note: NoteWithTypeName) => void;
-  onAddNote?: () => void;
 }
 
 const NoteList = ({
@@ -52,10 +50,8 @@ const NoteList = ({
   onEdit,
   onDelete,
   onRemoveType = () => {},
-  onAddType,
   onMoveNote = () => {},
   undo = () => {},
-  onAddNote = () => {},
 }: NoteListProps) => {
   const [noteToDelete, setNoteToDelete] = useState<number | null>(null);
   const [deletedNote, setDeletedNote] = useState<NoteWithTypeName | null>(null);

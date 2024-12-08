@@ -13,7 +13,7 @@ export const useNoteTypes = () => {
       setNoteTypes(types);
       setLoading(false);
     } catch (error) {
-      notification.error({ message: "Failed to fetch note types." });
+      notification.error({ message: "Failed to fetch note types."+error });
       setLoading(false);
     }
   }, []);
@@ -24,7 +24,7 @@ export const useNoteTypes = () => {
       await fetchAllTypes();
       notification.success({ message: "Note type created successfully" });
     } catch (error) {
-      notification.error({ message: "Failed to create note type" });
+      notification.error({ message: "Failed to create note type"+error });
     }
   }, [fetchAllTypes]);
 
@@ -34,7 +34,7 @@ export const useNoteTypes = () => {
       await fetchAllTypes();
       notification.success({ message: "Note type deleted successfully" });
     } catch (error) {
-      notification.error({ message: "Failed to delete note type" });
+      notification.error({ message: "Failed to delete note type"+error });
     }
   }, [fetchAllTypes]);
 

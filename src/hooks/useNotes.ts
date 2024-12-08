@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import { notification } from 'antd';
-import { Note, NoteType, NoteWithTypeName, NoteInput } from '../types';
+import { Note, NoteWithTypeName, NoteInput } from '../types';
 import { createNote, deleteNote, fetchNotes, updateNote } from '../actions/notes.action';
 
 export const useNotes = () => {
@@ -13,7 +13,7 @@ export const useNotes = () => {
       setNotes(notesData.filter((note) => !!note.content));
       setLoading(false);
     } catch (error) {
-      notification.error({ message: "Failed to fetch notes." });
+      notification.error({ message: "Failed to fetch notes."+error });
       setLoading(false);
     }
   }, []);
@@ -24,7 +24,7 @@ export const useNotes = () => {
       await fetchAllNotes();
       notification.success({ message: "Note created successfully" });
     } catch (error) {
-      notification.error({ message: "Failed to create note" });
+      notification.error({ message: "Failed to create note"+error });
     }
   }, [fetchAllNotes]);
 
@@ -34,7 +34,7 @@ export const useNotes = () => {
       await fetchAllNotes();
       notification.success({ message: "Note updated successfully" });
     } catch (error) {
-      notification.error({ message: "Failed to update note" });
+      notification.error({ message: "Failed to update note"+error });
     }
   }, [fetchAllNotes]);
 
@@ -44,7 +44,7 @@ export const useNotes = () => {
       await fetchAllNotes();
       notification.success({ message: "Note deleted successfully" });
     } catch (error) {
-      notification.error({ message: "Failed to delete note" });
+      notification.error({ message: "Failed to delete note"+error });
     }
   }, [fetchAllNotes]);
 

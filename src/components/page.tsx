@@ -51,28 +51,9 @@ const NotesPage: React.FC = () => {
     setIsEditing(false);
   };
 
-  const handleTypeSubmit = async (typeName: string) => {
-    await addNoteType(typeName);
-    onOpenChangeTypeModal();
-  };
+ 
 
-  const handleEditNote: (note: NoteWithTypeName) => void = (note) => {
-    setCurrentNote(note);
-    setIsEditing(true);
-    openNoteModal();
-  };
-
-  const handleDeleteNote = async (id: number) => {
-    await removeNote(id);
-  };
-
-  const handleDeleteType = async (id: number) => {
-    await removeNoteType(id);
-  };
-
-  const handleMoveNote = async (noteId: number, newTypeId: number) => {
-    await editNote(noteId, { typeId: newTypeId });
-  };
+  
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-6">
@@ -117,7 +98,6 @@ const NotesPage: React.FC = () => {
                 }}
                 onDelete={removeNote}
                 onRemoveType={removeNoteType}
-                onAddType={openTypeModal}
               />
 
               <NoteForm
