@@ -1,222 +1,144 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import React, {
-  useEffect,
-  useState,
-} from 'react';
-
-import { notification } from 'antd';
-
-import {
-  Spinner,
-  useDisclosure,
-} from '@nextui-org/react';
-
-import {
-  createNote,
-  createNoteType,
-  deleteNote,
-  deleteType,
-  fetchNotes,
-  fetchNoteTypes,
-  NoteWithTypeName,
-  updateNote,
-} from '../actions/notes.action';
+import React, { useEffect } from 'react';
+import { Spinner, useDisclosure } from '@nextui-org/react';
 import NoteForm from './noteForm';
 import NoteList from './noteList';
 import NoteTypeForm from './noteTypeForm';
+import { useNotes } from '../hooks/useNotes';
+import { useNoteTypes } from '../hooks/useNoteTypes';
+import { NoteWithTypeName } from '../types';
+import { ToastContainer } from 'react-toastify';
+import { Button } from '@nextui-org/react';
 
 const NotesPage: React.FC = () => {
-  const [notes, setNotes] = useState<NoteWithTypeName[]>([]);
-  const [noteTypes, setNoteTypes] = useState<{ id: number; typeName: string }[]>([]);
-  const [currentNote, setCurrentNote] = useState<NoteWithTypeName | null>(null);
+  const { 
+    notes, 
+    loading: notesLoading, 
+    fetchAllNotes,
+    addNote,
+    editNote,
+    removeNote 
+  } = useNotes();
+
+  const {
+    noteTypes,
+    loading: typesLoading,
+    fetchAllTypes,
+    addNoteType,
+    removeNoteType
+  } = useNoteTypes();
+
+  const [currentNote, setCurrentNote] = React.useState<NoteWithTypeName | null>(null);
   const { isOpen: isNoteModalOpen, onOpen: openNoteModal, onOpenChange: onOpenChangeNoteModal } = useDisclosure();
   const { isOpen: isTypeModalOpen, onOpen: openTypeModal, onOpenChange: onOpenChangeTypeModal } = useDisclosure();
-  const [isEditing, setIsEditing] = useState<boolean>(false);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [isEditing, setIsEditing] = React.useState<boolean>(false);
 
-  const fetchData = async () => {
-    try {
-      const [notesRes, typesRes] = await Promise.all([fetchNotes(), fetchNoteTypes()]);
-      setNotes(notesRes.filter((note) => !!note.content)); // Filter out notes with empty content
-      setNoteTypes(typesRes);
-      setLoading(false);
-    } catch (error) {
-      console.error("Error fetching data:", error);
-      notification.error({ message: "Failed to fetch data." });
-    }
-  };
-  
   useEffect(() => {
-    fetchData();
-  }, []);
+    fetchAllNotes();
+    fetchAllTypes();
+  }, [fetchAllNotes, fetchAllTypes]);
 
-  const handleCreateNote = async (values: any) => {
-    try {
-      const createdNote = await createNote({
-        content: values.content,
-        typeId: values.typeId,
-        color: values.color
-      });
-      if (createdNote) {
-        notification.success({ message: "Note created successfully.", placement: 'bottomRight' });
-        fetchData();
-      }
-    } catch (error) {
-      console.error("Error creating note:", error);
-      notification.error({ message: "Failed to create note." });
+  const handleNoteSubmit = async (noteData: any) => {
+    if (isEditing && currentNote) {
+      await editNote(currentNote.id, noteData);
+    } else {
+      await addNote(noteData);
     }
+    onOpenChangeNoteModal();
+    setCurrentNote(null);
+    setIsEditing(false);
   };
 
-  const handleUpdateNote = async (values: any) => {
-    if (currentNote) {
-      try {
-        const updatedNote = await updateNote(currentNote.id, {
-          content: values.content,
-          typeId: values.typeId,
-          color: values.color
-        });
-        if (updatedNote) {
-          notification.success({ message: "Note updated successfully." });
-          fetchData();
-          setCurrentNote(null);
-        }
-      } catch (error) {
-        console.error("Error updating note:", error);
-        notification.error({ message: "Failed to update note." });
-      }
-    }
+  const handleTypeSubmit = async (typeName: string) => {
+    await addNoteType(typeName);
+    onOpenChangeTypeModal();
   };
 
-  const handleDeleteNote = async (noteId: number) => {
-    try {
-      const success = await deleteNote(noteId);
-      if (success) {
-        notification.success({ message: "Note deleted successfully." });
-        fetchData();
-      }
-    } catch (error) {
-      console.error("Error deleting note:", error);
-      notification.error({ message: "Failed to delete note." });
-    }
-  };
-
-  const handleAddNoteType = async (type: string) => {
-    const newType = { id: Date.now(), typeName: type }; // Using Date.now() for temporary ID
-    setNoteTypes((prevTypes) => [...prevTypes, newType]);
-
-    try {
-      const success = await createNoteType(type);
-      if (success) {
-        notification.success({ message: "Note type added successfully." });
-        fetchData();
-      }
-    } catch (error) {
-      console.error("Error adding note type:", error);
-      notification.error({ message: "Failed to add note type." });
-      setNoteTypes((prevTypes) => prevTypes.filter((t) => t.id !== newType.id));
-    }
-  };
-
-  const handleRemoveType = async (typeId: number) => {
-    const removedType = noteTypes.find((type) => type.id === typeId);
-    setNoteTypes((prevTypes) => prevTypes.filter((type) => type.id !== typeId));
-
-    try {
-      const success = await deleteType(typeId);
-      if (success) {
-        notification.success({ message: "Note type removed successfully." });
-        fetchData();
-      }
-    } catch (error) {
-      console.error("Error removing note type:", error);
-      notification.error({ message: "Failed to remove note type." });
-      if (removedType) {
-        setNoteTypes((prevTypes) => [...prevTypes, removedType]);
-      }
-    }
-  };
-
-  const handleMoveNote = async (noteId: number, newTypeId: number) => {
-    try {
-      const note = notes.find((note) => note.id === noteId);
-      if (note) {
-        setNotes((prevNotes) =>
-          prevNotes.map((note) =>
-            note.id === noteId ? { ...note, typeId: newTypeId } : note
-          )
-        );
-        await updateNote(noteId, { typeId: newTypeId });
-        notification.success({ message: "Note moved successfully." });
-      }
-    } catch (error) {
-      console.error("Error moving note:", error);
-      notification.error({ message: "Failed to move note." });
-    }
-  };
-
-  const handleUndo = async (values: any) => {
-    try {
-      const createdNote = await createNote({
-        content: values.content,
-        typeId: values.typeId,
-        color: values.color
-      });
-      if (createdNote) {
-        notification.success({ message: "Note recovered successfully." });
-        fetchData();
-      }
-    } catch (error) {
-      console.error("Error recovering note:", error);
-      notification.error({ message: "Failed to recover note." });
-    }
-  };
-
-  const openModal = (note: NoteWithTypeName) => {
-    setIsEditing(note.id !== 0);
+  const handleEditNote: (note: NoteWithTypeName) => void = (note) => {
     setCurrentNote(note);
+    setIsEditing(true);
     openNoteModal();
   };
 
-  const handleFinish = (values: any) => {
-    if (isEditing && currentNote?.content !== "") {
-      handleUpdateNote(values);
-    } else {
-      handleCreateNote(values);
-    }
+  const handleDeleteNote = async (id: number) => {
+    await removeNote(id);
+  };
+
+  const handleDeleteType = async (id: number) => {
+    await removeNoteType(id);
+  };
+
+  const handleMoveNote = async (noteId: number, newTypeId: number) => {
+    await editNote(noteId, { typeId: newTypeId });
   };
 
   return (
-    <div className="p-4">
-      <NoteForm
-        isOpen={isNoteModalOpen}
-        isEditing={isEditing}
-        currentNote={currentNote}
-        onFinish={handleFinish}
-        noteTypes={noteTypes}
-        onOpenChange={onOpenChangeNoteModal}
-      />
-      <NoteTypeForm
-        onOpenChange={onOpenChangeTypeModal}
-        isOpen={isTypeModalOpen}
-        onFinish={handleAddNoteType}
-      />
-      <NoteList
-        notes={notes}
-        noteTypes={noteTypes}
-        onEdit={openModal}
-        onDelete={handleDeleteNote}
-        onRemoveType={handleRemoveType}
-        onAddType={openTypeModal}
-        onMoveNote={handleMoveNote}
-        undo={handleUndo}
-      />
-      {loading && (
-        <div className="flex justify-center items-center">
-          <Spinner color="warning" />
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-6">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex flex-col gap-6">
+          {(notesLoading || typesLoading) ? (
+            <div className="flex justify-center items-center h-[50vh]">
+              <Spinner size="lg" color="warning" />
+            </div>
+          ) : (
+            <>
+              <div className="flex justify-between items-center">
+                <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">
+                  Notes
+                </h1>
+                <div className="flex gap-3">
+                  <Button
+                    onPress={openTypeModal}
+                    className="bg-[#D95806] text-white font-medium"
+                  >
+                    Add Type
+                  </Button>
+                  <Button
+                    onPress={() => {
+                      setIsEditing(false);
+                      openNoteModal();
+                    }}
+                    className="bg-[#D95806] text-white font-medium"
+                  >
+                    Add Note
+                  </Button>
+                </div>
+              </div>
+
+              <NoteList
+                notes={notes}
+                noteTypes={noteTypes}
+                onEdit={(note) => {
+                  setCurrentNote(note);
+                  setIsEditing(true);
+                  openNoteModal();
+                }}
+                onDelete={removeNote}
+                onRemoveType={removeNoteType}
+                onAddType={openTypeModal}
+              />
+
+              <NoteForm
+                isOpen={isNoteModalOpen}
+                onOpenChange={onOpenChangeNoteModal}
+                onSubmit={handleNoteSubmit}
+                noteTypes={noteTypes}
+                initialValues={currentNote}  // Change from currentNote to initialValues
+                isEditing={isEditing}
+              />
+              <NoteTypeForm
+                isOpen={isTypeModalOpen}
+                onOpenChange={onOpenChangeTypeModal}
+                onSubmit={addNoteType}
+                noteTypes={noteTypes}
+              />
+            </>
+          )}
         </div>
-      )}
+      </div>
+      <ToastContainer position="bottom-right" theme="colored" />
     </div>
   );
 };

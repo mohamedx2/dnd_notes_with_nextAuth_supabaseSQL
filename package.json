@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@ant-design/icons": "^5.5.1",
+    "@hello-pangea/dnd": "^17.0.0",
     "@nextui-org/react": "^2.4.8",
     "@nextui-org/theme": "^2.2.11",
     "@supabase/supabase-js": "^2.45.4",
@@ -21,7 +22,6 @@
     "next-auth": "^4.24.8",
     "next-themes": "^0.3.0",
     "react": "^18",
-    "react-beautiful-dnd": "^13.1.1",
     "react-dom": "^18",
     "react-toastify": "^10.0.6"
   },
@@ -30,7 +30,6 @@
     "@types/jsonwebtoken": "^9.0.7",
     "@types/node": "^20",
     "@types/react": "^18",
-    "@types/react-beautiful-dnd": "^13.1.8",
     "@types/react-dom": "^18",
     "autoprefixer": "^10.4.20",
     "eslint": "^8",

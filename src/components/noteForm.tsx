@@ -24,8 +24,8 @@ import {
 interface NoteFormProps {
   isOpen: boolean;
   isEditing: boolean;
-  currentNote: NoteWithTypeName | null;
-  onFinish: (values: { typeId: number | null; content: string; color: string }) => void;
+  initialValues: NoteWithTypeName | null;
+  onSubmit: (values: { typeId: number | null; content: string; color: string }) => void;
   noteTypes: { id: number; typeName: string }[];
   onOpenChange: (isOpen: boolean) => void;
 }
@@ -33,100 +33,120 @@ interface NoteFormProps {
 const NoteForm: React.FC<NoteFormProps> = ({
   isOpen,
   isEditing,
-  currentNote,
-  onFinish,
+  initialValues,
+  onSubmit,
   noteTypes,
   onOpenChange
 }) => {
-  const [typeId, setTypeId] = useState<string | null>(currentNote?.typeId.toString() || null);
-  const [content, setContent] = useState<string>(currentNote?.content || '');
-  const [color, setColor] = useState<string>(currentNote?.color || '#000000');
+  const [typeId, setTypeId] = useState<string | null>(initialValues?.typeId.toString() || null);
+  const [content, setContent] = useState<string>(initialValues?.content || '');
+  const [color, setColor] = useState<string>(initialValues?.color || '#D95806');
 
   useEffect(() => {
-    if (currentNote) {
-      setTypeId(currentNote.typeId.toString());
-      setContent(currentNote.content);
-      setColor(currentNote.color || '#000000');
+    if (initialValues) {
+      setTypeId(initialValues.typeId.toString());
+      setContent(initialValues.content);
+      setColor(initialValues.color || '#D95806');
     } else {
       setTypeId(null);
       setContent('');
-      setColor('#000000');
+      setColor('#D95806');
     }
-  }, [currentNote]);
+  }, [initialValues]);
 
   const handleFinish = () => {
-    onFinish({
-      typeId: typeId ? parseInt(typeId, 10) : null,
-      content,
-      color,
-    });
-    // Reset the form
-    setTypeId(null);
-    setContent('');
-    setColor('#ffffff');
+    if (content.trim() && typeId) {
+      onSubmit({
+        typeId: parseInt(typeId),
+        content: content.trim(),
+        color
+      });
+    }
   };
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onOpenChange={(isOpen) => onOpenChange(isOpen)}
-      placement="center"
+    <Modal 
+      isOpen={isOpen} 
+      onOpenChange={onOpenChange}
+      size="2xl"
+      classNames={{
+        base: "bg-white dark:bg-gray-900",
+        header: "border-b border-gray-200 dark:border-gray-700",
+        body: "py-6",
+        footer: "border-t border-gray-200 dark:border-gray-700"
+      }}
     >
       <ModalContent>
         {(onClose) => (
           <>
-            <ModalHeader>
-              <h3 className="text-lg font-medium">
-                {isEditing ? 'Edit Note' : 'Create Note'}
+            <ModalHeader className="flex flex-col gap-1">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                {isEditing ? 'Edit Note' : 'New Note'}
               </h3>
             </ModalHeader>
             <ModalBody>
-              <div className="flex flex-col gap-4 p-4">
-                <div>
-                  <label htmlFor="typeId" className="block text-sm font-medium mb-2">Type</label>
-                  <RadioGroup
-                    value={typeId || ''}
-                    onValueChange={setTypeId}
-                    orientation="horizontal"
-                    className="flex flex-wrap gap-2"
-                  >
-                    {noteTypes.map((type) => (
-                      <Radio key={type.id} value={type.id.toString()} size="sm">
-                        {type.typeName}
-                      </Radio>
-                    ))}
-                  </RadioGroup>
-                </div>
-                <div>
-                  <label htmlFor="content" className="block text-sm font-medium mb-2">Content</label>
-                  <Textarea
-                    value={content}
-                    onChange={(e) => setContent(e.target.value)}
-                    rows={4}
-                    placeholder="Enter the note content"
-                    className="w-full"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="color" className="block text-sm font-medium mb-2">Color</label>
-                  <Input
-                    type="color"
-                    value={color}
-                    onChange={(e) => setColor(e.target.value)}
-                    className="w-24"
-                  />
-                </div>
+              <div className="flex flex-col gap-6">
+                <RadioGroup
+                  label="Select Type"
+                  value={typeId || undefined}
+                  onValueChange={setTypeId}
+                  orientation="horizontal"
+                  classNames={{
+                    label: "text-gray-700 dark:text-gray-300 font-medium"
+                  }}
+                >
+                  {noteTypes.map((type) => (
+                    <Radio key={type.id} value={type.id.toString()}>
+                      {type.typeName}
+                    </Radio>
+                  ))}
+                </RadioGroup>
+
+                <Textarea
+                  label="Content"
+                  placeholder="Enter note content"
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  variant="bordered"
+                  classNames={{
+                    label: "text-gray-700 dark:text-gray-300 font-medium",
+                    input: "bg-transparent",
+                    inputWrapper: "bg-default-100/50 dark:bg-default-100/20"
+                  }}
+                />
+
+                <Input
+                  type="color"
+                  label="Color"
+                  value={color}
+                  onChange={(e) => setColor(e.target.value)}
+                  variant="bordered"
+                  classNames={{
+                    label: "text-gray-700 dark:text-gray-300 font-medium",
+                    input: "bg-transparent h-10",
+                    inputWrapper: "bg-default-100/50 dark:bg-default-100/20 h-10"
+                  }}
+                />
               </div>
             </ModalBody>
             <ModalFooter>
-              <Button onClick={onClose} className="mr-2">
+              <Button 
+                color="danger" 
+                variant="light" 
+                onPress={onClose}
+                className="font-medium"
+              >
                 Cancel
               </Button>
-              <Button onClick={() => {
-                onClose();
-                handleFinish();
-              }}>
-                {isEditing ? 'Update' : 'Create'}
+              <Button 
+                color="primary"
+                onPress={() => {
+                  handleFinish();
+                  onClose();
+                }}
+                className="bg-[#D95806] font-medium"
+              >
+                {isEditing ? 'Save Changes' : 'Add Note'}
               </Button>
             </ModalFooter>
           </>

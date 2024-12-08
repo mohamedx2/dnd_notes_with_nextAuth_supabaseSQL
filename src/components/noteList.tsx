@@ -9,7 +9,7 @@ import {
   Draggable,
   Droppable,
   DropResult,
-} from 'react-beautiful-dnd';
+} from '@hello-pangea/dnd';
 import {
   toast,
   ToastContainer,
@@ -32,39 +32,41 @@ import {
   Button,
   useDisclosure,
 } from '@nextui-org/react';
+import { Card, CardBody } from "@nextui-org/react";
 
 interface NoteListProps {
   notes: NoteWithTypeName[];
   noteTypes: { id: number; typeName: string }[];
   onEdit: (note: NoteWithTypeName) => void;
   onDelete: (noteId: number) => void;
-  onRemoveType: (typeId: number) => void;
-  onAddType: () => void;
-  onMoveNote: (noteId: number, newTypeId: number) => void;
-  undo: (note: NoteWithTypeName) => void;
+  onRemoveType?: (typeId: number) => void;
+  onAddType?: () => void;
+  onMoveNote?: (noteId: number, newTypeId: number) => void;
+  undo?: (note: NoteWithTypeName) => void;
+  onAddNote?: () => void;
 }
 
-const NoteList: React.FC<NoteListProps> = ({
+const NoteList = ({
   notes,
   noteTypes,
   onEdit,
   onDelete,
-  onRemoveType,
+  onRemoveType = () => {},
   onAddType,
-  onMoveNote,
-  undo,
-}) => {
+  onMoveNote = () => {},
+  undo = () => {},
+  onAddNote = () => {},
+}: NoteListProps) => {
   const [noteToDelete, setNoteToDelete] = useState<number | null>(null);
   const [deletedNote, setDeletedNote] = useState<NoteWithTypeName | null>(null);
+  const [localNotes, setLocalNotes] = useState(notes);
 
   const getColumnNotes = (typeId: number) =>
-    notes.filter((note) => note.typeId === typeId);
-
-  
+    localNotes.filter((note) => note.typeId === typeId && note.id);
 
   const handleDelete = () => {
     if (noteToDelete !== null) {
-      const note = notes.find((n) => n.id === noteToDelete);
+      const note = localNotes.find((n) => n.id === noteToDelete);
       if (note) {
         setDeletedNote(note);
         onDelete(noteToDelete);
@@ -95,7 +97,6 @@ const NoteList: React.FC<NoteListProps> = ({
     }
   };
 
-
   const handleUndo = () => {
     if (deletedNote) {
       undo(deletedNote);
@@ -112,17 +113,35 @@ const NoteList: React.FC<NoteListProps> = ({
   };
 
   const onDragEnd = (result: DropResult) => {
-    const { source, destination } = result;
+    const { source, destination, draggableId } = result;
+    
+    // Find the note being dragged
+    const draggedNote = localNotes.find(note => note.id.toString() === draggableId);
+    if (!draggedNote) {
+      console.warn(`Note with id ${draggableId} not found`);
+      return;
+    }
+
     if (!destination) {
-      const noteId = parseInt(result.draggableId, 10);
-      setNoteToDelete(noteId);
+      setNoteToDelete(draggedNote.id);
       onOpen();
       return;
     }
+
     if (source.droppableId !== destination.droppableId) {
-      const destinationTypeId = parseInt(destination.droppableId.replace("droppable-", ""), 10);
-      const noteId = parseInt(result.draggableId, 10);
-      onMoveNote(noteId, destinationTypeId);
+      const newTypeId = parseInt(destination.droppableId.replace("droppable-", ""));
+      if (!isNaN(newTypeId)) {
+        // Optimistically update the UI
+        const updatedNotes = localNotes.map(note => 
+          note.id === draggedNote.id 
+            ? { ...note, typeId: newTypeId }
+            : note
+        );
+        setLocalNotes(updatedNotes);
+        
+        // Then update the backend
+        onMoveNote(draggedNote.id, newTypeId);
+      }
     }
   };
 
@@ -182,7 +201,7 @@ const NoteList: React.FC<NoteListProps> = ({
                     className="h-[27px] w-[97px] rounded-[5px] p-[10px] text-[#D95806] text-[11.5px] font-[400] leading-[20px] text-left border border-[#D95806]"
                     style={{ fontFamily: 'Calibri' }}
                     variant="light"
-                    onClick={() => onRemoveType(type.id)}
+                    onClick={() => onRemoveType?.(type.id)}
                   >
                     <DeleteOutlined /> Remove Type
                   </Button>
@@ -190,82 +209,95 @@ const NoteList: React.FC<NoteListProps> = ({
               </div>
               <Droppable droppableId={`droppable-${type.id}`}>
                 {(provided, snapshot) => (
-                  <div
+                  <Card
                     ref={provided.innerRef}
                     {...provided.droppableProps}
-                    className={`bg-[#F3F4F6] p-[10px] rounded-[9px] min-h-[300px] gap-[10px] ${snapshot.isDraggingOver ? "bg-blue-100" : ""}`}
+                    className={`p-4 min-h-[300px] ${
+                      snapshot.isDraggingOver 
+                        ? "bg-primary-50 border-2 border-primary" 
+                        : "bg-default-50"
+                    }`}
+                    radius="lg"
+                    shadow="sm"
                   >
-                    {getColumnNotes(type.id).map((item, index) => (
-                      <Draggable
-                        key={item.id.toString()}
-                        draggableId={item.id.toString()}
-                        index={index}
-                      >
-                        {(provided, snapshot) => (
-                          <div
-                            ref={provided.innerRef}
-                            {...provided.draggableProps}
-                            {...provided.dragHandleProps}
-                          >
-                            <div
-                              style={{ background: item.color }}
-                              className={`p-4 rounded-lg shadow-sm transition-transform mb-2 transform ${
-                                snapshot.isDragging ? "translate-y-[-5px] shadow-lg" : ""
-                              }`}
+                    <div className="space-y-3">
+                      {getColumnNotes(type.id).map((note, index) => (
+                        <Draggable
+                          key={note.id}
+                          draggableId={note.id.toString()}
+                          index={index}
+                          shouldRespectForcePress
+                        >
+                          {(provided, snapshot) => (
+                            <Card
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                              {...provided.dragHandleProps}
+                              style={{
+                                ...provided.draggableProps.style,
+                                transform: snapshot.isDragging
+                                  ? provided.draggableProps.style?.transform
+                                  : "none",
+                              }}
+                              className={`${
+                                snapshot.isDragging
+                                  ? "shadow-lg scale-105"
+                                  : "hover:scale-102"
+                              } transition-all duration-200`}
+                              radius="md"
                             >
-                              <div className="flex items-center justify-between mb-2 rounded-[9px] py-[17px]">
-                                <div className="flex items-center w-[185px]">
-                                  <span
-                                    className={`mr-2 text-[14px] font-[400] leading-[18.62px] text-left ${
-                                      isColorDark(item.color) ? "text-white" : "text-black"
-                                    }`}
-                                    style={{ fontFamily: 'Segoe UI' }}
-                                  >
-                                    {item.content}
-                                  </span>
-                                </div>
-                                <div className="flex space-x-1 w-[50px]">
+                              <CardBody
+                                style={{ background: note.color }}
+                                className={`p-3 flex flex-row justify-between items-center ${
+                                  isColorDark(note.color) ? "text-white" : "text-black"
+                                }`}
+                              >
+                                <span className="text-sm font-normal flex-grow">
+                                  {note.content}
+                                </span>
+                                <div className="flex gap-1">
                                   <Button
-                                    onClick={() => onEdit(item)}
+                                    isIconOnly
+                                    size="sm"
                                     variant="light"
-                                    className="w-[24px] h-[24px] text-[#D95806] min-w-0 p-0"
-                                    style={{ borderRadius: '50%', fontSize: '16px' }}
+                                    onPress={() => onEdit(note)}
+                                    className={`min-w-0 ${
+                                      isColorDark(note.color)
+                                        ? "text-white/90 hover:text-white"
+                                        : "text-black/90 hover:text-black"
+                                    }`}
                                   >
-                                    <EditOutlined style={{ fontSize: '16px' }} />
+                                    <EditOutlined />
                                   </Button>
                                   <Button
-                                    onClick={() => {
-                                      setNoteToDelete(item.id);
+                                    isIconOnly
+                                    size="sm"
+                                    variant="light"
+                                    onPress={() => {
+                                      setNoteToDelete(note.id);
                                       onOpen();
                                     }}
-                                    variant="light"
-                                    className="w-[24px] h-[24px] text-[#D95806] min-w-0 p-0"
-                                    style={{ borderRadius: '50%', fontSize: '16px' }}
+                                    className={`min-w-0 ${
+                                      isColorDark(note.color)
+                                        ? "text-white/90 hover:text-white"
+                                        : "text-black/90 hover:text-black"
+                                    }`}
                                   >
-                                    <DeleteOutlined style={{ fontSize: '16px' }} />
+                                    <DeleteOutlined />
                                   </Button>
                                 </div>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </Draggable>
-                    ))}
+                              </CardBody>
+                            </Card>
+                          )}
+                        </Draggable>
+                      ))}
+                    </div>
                     {provided.placeholder}
-                  </div>
+                  </Card>
                 )}
               </Droppable>
             </div>
           ))}
-          <div className="col-span-1">
-            <Button
-              onClick={onAddType}
-              className="w-[255px] md:w-[525px] h-[40px] rounded-[7px] p-[10px] bg-[#D95806] text-white text-[14px] font-[400] leading-[18.62px] text-left"
-              style={{ fontFamily: 'Segoe UI' }}
-            >
-              <PlusOutlined /> Add Type
-            </Button>
-          </div>
         </div>
       </DragDropContext>
       <Modal isOpen={isOpen} onClose={onOpenChange} placement="center">
