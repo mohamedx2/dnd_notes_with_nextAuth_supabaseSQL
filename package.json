@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "export": "next export"  // Add this line to export your project
   },
   "dependencies": {
     "@ant-design/icons": "^5.5.1",
